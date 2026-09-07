@@ -1,18 +1,22 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import {
   Artifact,
   Calendar,
   CreateEventRequest,
+  DelegationPerson,
   EditScope,
   EventDetails,
   Health,
   Occurrence,
   ParticipantList,
   ParticipantStatus,
+  Room,
+  RoomAvailability,
   UpdateEventRequest,
   User,
+  UserAvailability,
 } from './models';
 
 /**
@@ -96,9 +100,62 @@ export class TalkatonApi {
     return this.http.post<EventDetails>(`/api/events/${eventId}/rsvp`, { status });
   }
 
+  /** Грид занятости (Этап 7.1): busy-интервалы каждого из `userIds` за период. */
+  availability(userIds: string[], fromUtc: string, toUtc: string): Observable<UserAvailability[]> {
+    if (userIds.length === 0) {
+      return of([]);
+    }
+
+    const params = new HttpParams().set('userIds', userIds.join(',')).set('from', fromUtc).set('to', toUtc);
+    return this.http.get<UserAvailability[]>('/api/availability', { params });
+  }
+
+  /** Список переговорок (Этап 7.2) для выбора при создании встречи. */
+  rooms(): Observable<Room[]> {
+    return this.http.get<Room[]>('/api/rooms');
+  }
+
+  /** Грид занятости переговорок за период — тот же принцип, что и `availability`. */
+  roomAvailability(roomIds: string[], fromUtc: string, toUtc: string): Observable<RoomAvailability[]> {
+    if (roomIds.length === 0) {
+      return of([]);
+    }
+
+    const params = new HttpParams().set('roomIds', roomIds.join(',')).set('from', fromUtc).set('to', toUtc);
+    return this.http.get<RoomAvailability[]>('/api/rooms/availability', { params });
+  }
+
   users(query?: string): Observable<User[]> {
     const params = query ? new HttpParams().set('query', query) : undefined;
     return this.http.get<User[]>('/api/users', { params });
+  }
+
+  /** Профиль по id — публичная страница самозаписи (Этап 7.4) знает только userId из ссылки. */
+  user(userId: string): Observable<User> {
+    return this.http.get<User>(`/api/users/${userId}`);
+  }
+
+  /** Резервное время до/после встречи (Этап 7.5) — своя настройка. */
+  updateMyBuffer(bufferBeforeMinutes: number, bufferAfterMinutes: number): Observable<User> {
+    return this.http.patch<User>('/api/users/me/buffer', { bufferBeforeMinutes, bufferAfterMinutes });
+  }
+
+  /** Делегирование (Этап 7.6): кому я разрешил управлять моим календарём. */
+  myDelegates(): Observable<DelegationPerson[]> {
+    return this.http.get<DelegationPerson[]>('/api/delegations/my-delegates');
+  }
+
+  /** От чьего имени я могу создавать и править встречи. */
+  grantedToMe(): Observable<DelegationPerson[]> {
+    return this.http.get<DelegationPerson[]>('/api/delegations/granted-to-me');
+  }
+
+  grantDelegation(delegateUserId: string): Observable<DelegationPerson> {
+    return this.http.post<DelegationPerson>('/api/delegations', { delegateUserId });
+  }
+
+  revokeDelegation(delegateUserId: string): Observable<void> {
+    return this.http.delete<void>(`/api/delegations/${delegateUserId}`);
   }
 
   participantLists(): Observable<ParticipantList[]> {
@@ -111,6 +168,11 @@ export class TalkatonApi {
 
   deleteParticipantList(id: string): Observable<void> {
     return this.http.delete<void>(`/api/participant-lists/${id}`);
+  }
+
+  /** Ротация по очереди (Этап 7.3): следующий человек из списка, кто ещё не получал встречу. */
+  nextRoundRobinMember(listId: string): Observable<User> {
+    return this.http.post<User>(`/api/participant-lists/${listId}/round-robin/next`, null);
   }
 
   private scopeParams(scope: EditScope, occurrenceStartUtc?: string): HttpParams {

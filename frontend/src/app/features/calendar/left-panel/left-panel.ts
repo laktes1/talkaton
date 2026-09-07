@@ -1,8 +1,11 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MiniMonth } from '../mini-month/mini-month';
 import { Calendar, ParticipantList } from '../../../core/api/models';
 import { BirthdayScope } from '../calendar-store';
 import { APP_VERSION } from '../../../core/app-version';
+import { SessionService } from '../../../core/session/session.service';
+import { TalkatonApi } from '../../../core/api/talkaton-api';
 
 /**
  * Левая панель макета: создание встречи, мини-календарь, «Мои календари»
@@ -10,12 +13,15 @@ import { APP_VERSION } from '../../../core/app-version';
  */
 @Component({
   selector: 'app-left-panel',
-  imports: [MiniMonth],
+  imports: [MiniMonth, FormsModule],
   templateUrl: './left-panel.html',
   styleUrl: './left-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LeftPanel {
+  private readonly session = inject(SessionService);
+  private readonly api = inject(TalkatonApi);
+
   readonly calendars = input.required<readonly Calendar[]>();
   readonly participantLists = input.required<readonly ParticipantList[]>();
   readonly selectedDate = input.required<Date>();
@@ -29,11 +35,17 @@ export class LeftPanel {
   readonly birthdayScopeChanged = output<BirthdayScope>();
   readonly listDeleted = output<ParticipantList>();
   readonly listClicked = output<ParticipantList>();
+  readonly delegationRequested = output<void>();
 
   protected readonly showBdayPopover = signal(false);
   protected readonly popoverTop = signal(0);
   protected readonly popoverLeft = signal(0);
   protected readonly version = APP_VERSION;
+
+  /** Резервное время до/после встречи (Этап 7.5) — своя настройка, читается из профиля. */
+  protected readonly bufferBefore = linkedSignal(() => this.session.user()?.bufferBeforeMinutes ?? 0);
+  protected readonly bufferAfter = linkedSignal(() => this.session.user()?.bufferAfterMinutes ?? 0);
+  protected readonly bufferSaved = signal(false);
 
   protected isBirthdayCalendar(calendar: Calendar): boolean {
     return calendar.name.toLowerCase().includes('рождения');
@@ -54,5 +66,15 @@ export class LeftPanel {
   protected selectScope(scope: BirthdayScope): void {
     this.birthdayScopeChanged.emit(scope);
     this.closePopover();
+  }
+
+  protected saveBuffer(): void {
+    this.api.updateMyBuffer(this.bufferBefore(), this.bufferAfter()).subscribe({
+      next: (user) => {
+        this.session.updateUser(user);
+        this.bufferSaved.set(true);
+        setTimeout(() => this.bufferSaved.set(false), 1500);
+      },
+    });
   }
 }

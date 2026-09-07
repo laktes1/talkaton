@@ -55,6 +55,18 @@
       <span class="header__action-label">Созвониться сейчас</span>
     </button>
 
+    @if (user()) {
+      <button
+        type="button"
+        class="header__ghost"
+        title="Скопировать ссылку — коллеги смогут сами забронировать у вас время"
+        (click)="copyBookingLink()"
+      >
+        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span class="header__action-label">{{ linkCopied() ? 'Ссылка скопирована' : 'Ссылка для самозаписи' }}</span>
+      </button>
+    }
+
     @if (user(); as person) {
       <button
         type="button"

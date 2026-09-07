@@ -26,6 +26,8 @@ public static class DatabaseStartup
 
         await db.Database.MigrateAsync();
         logger.LogInformation("Миграции применены");
+
+        await RoomSeeder.EnsureSeededAsync(db);
     }
 
     /// <summary>

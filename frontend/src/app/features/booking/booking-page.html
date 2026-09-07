@@ -1,0 +1,71 @@
+<div class="booking">
+  <div class="booking__card">
+    <h1 class="booking__title">Толкатрон</h1>
+
+    @if (loadError(); as message) {
+      <p class="booking__error" role="alert">{{ message }}</p>
+    } @else if (bookedOk()) {
+      <p class="booking__success">
+        Готово — встреча с {{ host()?.displayName }} на {{ dateValue() }} в {{ startTime() }} создана.
+        Она уже в вашем календаре.
+      </p>
+    } @else if (host(); as person) {
+      <p class="booking__hint">
+        Забронируйте время у <strong>{{ person.displayName }}</strong> — выберите день, посмотрите на
+        занятость и назначьте слот сами, без переписки «когда вам удобно».
+      </p>
+
+      <div class="booking__row">
+        <label class="field">
+          <span class="field__label">Дата</span>
+          <input
+            type="date"
+            class="field__input"
+            [ngModel]="dateValue()"
+            (ngModelChange)="dateValue.set($event)"
+          />
+        </label>
+
+        <label class="field field--narrow">
+          <span class="field__label">Начало</span>
+          <input
+            type="time"
+            class="field__input"
+            [ngModel]="startTime()"
+            (ngModelChange)="startTime.set($event)"
+          />
+        </label>
+
+        <label class="field field--narrow">
+          <span class="field__label">Длительность</span>
+          <select
+            class="field__input"
+            [ngModel]="durationMinutes()"
+            (ngModelChange)="durationMinutes.set(+$event)"
+          >
+            @for (minutes of durationChoices; track minutes) {
+              <option [value]="minutes">{{ minutes }} мин</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <app-availability-grid
+        [people]="hostAsList()"
+        [day]="day()"
+        [rangeStartMinutes]="rangeStartMinutes()"
+        [rangeEndMinutes]="rangeEndMinutes()"
+      />
+
+      @if (submitError(); as message) {
+        <p class="booking__error" role="alert">{{ message }}</p>
+      }
+
+      <button type="button" class="booking__submit" [disabled]="submitting()" (click)="book()">
+        {{ submitting() ? 'Бронируем…' : 'Забронировать' }}
+      </button>
+    } @else {
+      <p class="booking__hint">Загружаем…</p>
+    }
+  </div>
+</div>

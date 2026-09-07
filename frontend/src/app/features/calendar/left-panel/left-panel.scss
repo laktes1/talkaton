@@ -38,6 +38,56 @@
   }
 }
 
+.buffer-row {
+  display: flex;
+  gap: var(--tk-space-2);
+}
+
+.buffer-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--tk-space-1);
+  font-size: var(--tk-font-size-sm);
+  color: var(--tk-text-secondary);
+
+  input {
+    padding: var(--tk-space-2);
+    background: var(--tk-surface-base);
+    border: 1px solid var(--tk-border-strong);
+    border-radius: var(--tk-radius-md);
+    color: var(--tk-text-primary);
+    font: inherit;
+
+    &:focus {
+      border-color: var(--tk-accent);
+      outline: none;
+    }
+  }
+}
+
+.buffer-saved {
+  margin: var(--tk-space-1) 0 0;
+  color: var(--tk-status-accepted);
+  font-size: var(--tk-font-size-sm);
+}
+
+.delegation-open {
+  width: 100%;
+  padding: var(--tk-space-2) var(--tk-space-3);
+  background: var(--tk-surface-raised);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+  color: var(--tk-text-secondary);
+  font-size: var(--tk-font-size-sm);
+  text-align: left;
+
+  &:hover {
+    background: var(--tk-surface-hover);
+    color: var(--tk-text-primary);
+  }
+}
+
 .section-title {
   margin: 0 0 var(--tk-space-3);
   color: var(--tk-text-secondary);

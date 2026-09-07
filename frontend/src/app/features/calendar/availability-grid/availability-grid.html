@@ -1,0 +1,46 @@
+<div class="availability" [class.availability--loading]="loading()">
+  <div class="availability__hours">
+    <span class="availability__spacer"></span>
+    <div class="availability__hour-marks">
+      @for (hour of hourMarks; track hour) {
+        <span
+          class="availability__hour-mark"
+          [style.left.%]="((hour - displayStartHour) / (displayEndHour - displayStartHour)) * 100"
+        >{{ hour }}:00</span>
+      }
+    </div>
+  </div>
+
+  @for (row of rows(); track row.user.id) {
+    <div class="availability__row">
+      <span class="availability__person">
+        <span
+          class="availability__avatar"
+          [style.background]="'var(--tk-avatar-' + row.user.avatarColorIndex + ')'"
+          aria-hidden="true"
+        >
+          {{ initials(row.user.displayName) }}
+        </span>
+        {{ row.user.displayName }}
+      </span>
+      <div class="availability__track">
+        @if (selectionStyle(); as sel) {
+          <span
+            class="availability__selection"
+            [style.left.%]="sel.leftPct"
+            [style.width.%]="sel.widthPct"
+          ></span>
+        }
+        @for (segment of row.segments; track $index) {
+          <span
+            class="availability__busy"
+            [style.left.%]="segment.leftPct"
+            [style.width.%]="segment.widthPct"
+          ></span>
+        }
+      </div>
+    </div>
+  } @empty {
+    <p class="availability__empty">Добавьте участников, чтобы увидеть их занятость</p>
+  }
+</div>

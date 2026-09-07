@@ -1,0 +1,75 @@
+<button type="button" class="backdrop" aria-label="Закрыть" (click)="closed.emit()"></button>
+
+<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="delegation-title" (keydown.escape)="closed.emit()">
+  <header class="dialog__header">
+    <div>
+      <p class="dialog__eyebrow">Делегирование</p>
+      <h2 class="dialog__title" id="delegation-title">Кто может управлять моим календарём</h2>
+    </div>
+    <button type="button" class="dialog__close" aria-label="Закрыть" (click)="closed.emit()">✕</button>
+  </header>
+
+  <div class="dialog__body">
+    @if (myDelegates().length > 0) {
+      <div class="field">
+        <span class="field__label">Уже разрешено</span>
+        <ul class="grants">
+          @for (person of myDelegates(); track person.userId) {
+            <li class="grant">
+              <span class="grant__name">{{ person.displayName }}</span>
+              <button
+                type="button"
+                class="grant__revoke"
+                [disabled]="saving()"
+                (click)="revoked.emit(person.userId)"
+              >
+                Забрать право
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <label class="field">
+      <span class="field__label">Разрешить ещё кому-то</span>
+      <span class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+        <input
+          type="search"
+          autocomplete="off"
+          placeholder="Поиск по имени"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </span>
+    </label>
+
+    <ul class="people">
+      @for (person of candidates(); track person.id) {
+        <li>
+          <button type="button" class="person" [disabled]="saving()" (click)="granted.emit(person.id)">
+            <span class="person__avatar" [style.background]="'var(--tk-avatar-' + person.avatarColorIndex + ')'" aria-hidden="true">
+              {{ initials(person.displayName) }}
+            </span>
+            <span class="person__name">{{ person.displayName }}</span>
+            <span class="person__add" aria-hidden="true">+</span>
+          </button>
+        </li>
+      } @empty {
+        <li class="people__empty">Никого не найдено</li>
+      }
+    </ul>
+
+    @if (serverError(); as message) {
+      <p class="dialog__error" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  <footer class="dialog__footer">
+    <button type="button" class="dialog__cancel" (click)="closed.emit()">Готово</button>
+  </footer>
+</div>

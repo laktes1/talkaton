@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionService } from '../../core/session/session.service';
 import { ReminderService } from '../../features/reminders/reminder.service';
@@ -47,8 +47,37 @@ export class AppHeader {
       .join('');
   });
 
+  protected readonly linkCopied = signal(false);
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+
   protected enableNotifications(): void {
     this.reminders.requestPermission();
+  }
+
+  /**
+   * Публичная страница самозаписи (Этап 7.4) — ссылка на самого себя, чтобы коллеги
+   * сами бронировали время, глядя на занятость, вместо переписки «когда вам удобно».
+   */
+  protected copyBookingLink(): void {
+    const id = this.user()?.id;
+    if (!id) {
+      return;
+    }
+
+    const url = `${location.origin}/book/${id}`;
+    navigator.clipboard?.writeText(url).then(
+      () => {
+        this.linkCopied.set(true);
+        if (this.copiedTimer) {
+          clearTimeout(this.copiedTimer);
+        }
+        this.copiedTimer = setTimeout(() => this.linkCopied.set(false), 2000);
+      },
+      () => {
+        // Буфер обмена недоступен (нет разрешения/не https) — тихо ничего не делаем,
+        // это вспомогательная кнопка, а не критичная функциональность.
+      },
+    );
   }
 
   protected signOut(): void {

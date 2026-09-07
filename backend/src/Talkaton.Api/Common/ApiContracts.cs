@@ -3,10 +3,21 @@ using Talkaton.Domain.Entities;
 namespace Talkaton.Api.Common;
 
 /// <summary>Человек в списках участников и в поиске.</summary>
-public record UserDto(Guid Id, string DisplayName, string TimeZoneId, int AvatarColorIndex)
+public record UserDto(
+    Guid Id,
+    string DisplayName,
+    string TimeZoneId,
+    int AvatarColorIndex,
+    int BufferBeforeMinutes,
+    int BufferAfterMinutes)
 {
-    public static UserDto From(User user) =>
-        new(user.Id, user.DisplayName, user.TimeZoneId, user.AvatarColorIndex);
+    public static UserDto From(User user) => new(
+        user.Id,
+        user.DisplayName,
+        user.TimeZoneId,
+        user.AvatarColorIndex,
+        user.BufferBeforeMinutes,
+        user.BufferAfterMinutes);
 }
 
 /// <summary>

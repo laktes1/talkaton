@@ -49,6 +49,31 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                     b.ToTable("calendars", (string)null);
                 });
 
+            modelBuilder.Entity("Talkaton.Domain.Entities.Delegation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DelegateId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DelegateId");
+
+                    b.HasIndex("OwnerId", "DelegateId")
+                        .IsUnique();
+
+                    b.ToTable("delegations", (string)null);
+                });
+
             modelBuilder.Entity("Talkaton.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -56,6 +81,9 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("CalendarId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedUtc")
@@ -78,6 +106,9 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("TEXT");
 
@@ -95,9 +126,13 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("OrganizerId");
 
                     b.HasIndex("CalendarId", "StartUtc");
+
+                    b.HasIndex("RoomId", "StartUtc");
 
                     b.ToTable("events", (string)null);
                 });
@@ -238,6 +273,9 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("blue");
 
+                    b.Property<Guid?>("LastRoundRobinMemberId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -289,6 +327,25 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                     b.ToTable("reminders", (string)null);
                 });
 
+            modelBuilder.Entity("Talkaton.Domain.Entities.Room", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("rooms", (string)null);
+                });
+
             modelBuilder.Entity("Talkaton.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -297,6 +354,16 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("AvatarColorIndex")
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("BufferAfterMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("BufferBeforeMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("TEXT");
@@ -335,6 +402,25 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Talkaton.Domain.Entities.Delegation", b =>
+                {
+                    b.HasOne("Talkaton.Domain.Entities.User", "Delegate")
+                        .WithMany()
+                        .HasForeignKey("DelegateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Talkaton.Domain.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Delegate");
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("Talkaton.Domain.Entities.Event", b =>
                 {
                     b.HasOne("Talkaton.Domain.Entities.Calendar", "Calendar")
@@ -343,15 +429,29 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Talkaton.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Talkaton.Domain.Entities.User", "Organizer")
                         .WithMany()
                         .HasForeignKey("OrganizerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Talkaton.Domain.Entities.Room", "Room")
+                        .WithMany("Events")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Calendar");
 
+                    b.Navigation("CreatedByUser");
+
                     b.Navigation("Organizer");
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("Talkaton.Domain.Entities.EventArtifact", b =>
@@ -474,6 +574,11 @@ namespace Talkaton.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Talkaton.Domain.Entities.ParticipantList", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("Talkaton.Domain.Entities.Room", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Talkaton.Domain.Entities.User", b =>

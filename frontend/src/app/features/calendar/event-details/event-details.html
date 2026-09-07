@@ -40,6 +40,18 @@
     </button>
   }
 
+  @if (occurrence.roomName; as roomName) {
+    <section class="row">
+      <span class="row__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M6 21V7l6-4 6 4v14M10 21v-6h4v6"/></svg>
+      </span>
+      <div>
+        <p class="row__main">Переговорка</p>
+        <p class="row__sub">{{ roomName }}</p>
+      </div>
+    </section>
+  }
+
   @if (details().description; as description) {
     <p class="description">{{ description }}</p>
   }

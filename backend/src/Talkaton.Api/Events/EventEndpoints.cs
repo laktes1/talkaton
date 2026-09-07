@@ -164,7 +164,7 @@ public static class EventEndpoints
         TalkatonDbContext db,
         CancellationToken ct)
     {
-        var organizer = currentUser.Required;
+        var actingUser = currentUser.Required;
 
         var title = request.Title?.Trim() ?? string.Empty;
         if (title.Length == 0)
@@ -179,11 +179,32 @@ public static class EventEndpoints
             return Problem("Встреча заканчивается раньше, чем начинается", "Конец должен быть позже начала.");
         }
 
+        // Делегирование (Этап 7.6): «от чьего имени» встреча — сам актор по умолчанию,
+        // либо тот, кто явно делегировал ему право управлять своим календарём.
+        var organizerId = actingUser.Id;
+        if (request.OnBehalfOfUserId is { } onBehalfOf && onBehalfOf != actingUser.Id)
+        {
+            if (!await db.Delegations.AnyAsync(x => x.OwnerId == onBehalfOf && x.DelegateId == actingUser.Id, ct))
+            {
+                return Results.Problem(
+                    title: "Нет права создавать встречи от имени этого человека",
+                    detail: "Попросите его сначала выдать вам делегирование на управление календарём.",
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            organizerId = onBehalfOf;
+        }
+
         var calendar = await db.Calendars
-            .FirstOrDefaultAsync(x => x.Id == request.CalendarId && x.OwnerId == organizer.Id, ct);
+            .FirstOrDefaultAsync(x => x.Id == request.CalendarId && x.OwnerId == organizerId, ct);
         if (calendar is null)
         {
-            return Problem("Неизвестный календарь", "Создавать встречи можно только в своих календарях.");
+            return Problem("Неизвестный календарь", "Создавать встречи можно только в календарях того, от чьего имени вы действуете.");
+        }
+
+        if (await ValidateRoomAsync(db, request.RoomId, startUtc, endUtc, excludeEventId: null, ct) is { } roomError)
+        {
+            return roomError;
         }
 
         string? rrule = null;
@@ -202,7 +223,8 @@ public static class EventEndpoints
         {
             Id = Guid.NewGuid(),
             CalendarId = calendar.Id,
-            OrganizerId = organizer.Id,
+            OrganizerId = organizerId,
+            CreatedByUserId = actingUser.Id,
             Title = title,
             Description = request.Description?.Trim(),
             StartUtc = startUtc,
@@ -210,6 +232,7 @@ public static class EventEndpoints
             IsAllDay = request.IsAllDay,
             RecurrenceRule = rrule,
             TalkRoomSlug = string.IsNullOrWhiteSpace(request.TalkRoomSlug) ? null : request.TalkRoomSlug.Trim(),
+            RoomId = request.RoomId,
             CreatedUtc = now,
             UpdatedUtc = now,
         };
@@ -217,12 +240,12 @@ public static class EventEndpoints
         meeting.Participants.Add(new EventParticipant
         {
             EventId = meeting.Id,
-            UserId = organizer.Id,
+            UserId = organizerId,
             Status = ParticipantStatus.Accepted,
             IsOrganizer = true,
         });
 
-        await AddParticipantsAsync(db, meeting, request.ParticipantIds, organizer.Id, ct);
+        await AddParticipantsAsync(db, meeting, request.ParticipantIds, organizerId, ct);
 
         var reminder = NormalizeReminder(request.ReminderMinutesBefore);
         foreach (var participant in meeting.Participants)
@@ -243,11 +266,11 @@ public static class EventEndpoints
         db.Events.Add(meeting);
         await db.SaveChangesAsync(ct);
 
-        var saved = await Visible(db, organizer.Id).FirstAsync(x => x.Id == meeting.Id, ct);
+        var saved = await Visible(db, organizerId).FirstAsync(x => x.Id == meeting.Id, ct);
         var occurrence = ResolveOccurrence(saved, occurrenceStart: null);
         return occurrence is null
             ? Results.NoContent()
-            : Results.Created($"/api/events/{meeting.Id}", EventMapper.ToDetails(occurrence.Value, organizer.Id));
+            : Results.Created($"/api/events/{meeting.Id}", EventMapper.ToDetails(occurrence.Value, organizerId));
     }
 
     private static async Task<IResult> UpdateAsync(
@@ -270,11 +293,12 @@ public static class EventEndpoints
         {
             CalendarId: null, Title: null, Description: null, StartUtc: null, EndUtc: null,
             IsAllDay: null, RecurrenceRule: null, ClearRecurrence: null, TalkRoomSlug: null, ParticipantIds: null,
-            GenerateArtifacts: null,
+            GenerateArtifacts: null, RoomId: null, ClearRoom: null,
         };
 
         // Участник встречи может настроить себе напоминание, но не переписать чужую встречу.
-        if (source.OrganizerId != viewer.Id && !reminderOnly)
+        // Правит организатор либо его делегат (Этап 7.6) — секретарь тоже может редактировать.
+        if (!await CanManageAsync(db, viewer.Id, source.OrganizerId, ct) && !reminderOnly)
         {
             return Results.Problem(
                 title: "Встречу правит организатор",
@@ -295,7 +319,7 @@ public static class EventEndpoints
         var effectiveScope = ParseScope(scope);
         var result = effectiveScope == EditScope.Occurrence
             ? ApplyToOccurrence(request, source, occurrenceStart, db)
-            : await ApplyToSeriesAsync(request, source, viewer.Id, db, ct);
+            : await ApplyToSeriesAsync(request, source, source.OrganizerId, db, ct);
 
         if (result is not null)
         {
@@ -328,7 +352,7 @@ public static class EventEndpoints
         {
             CalendarId: null, Title: null, Description: null, IsAllDay: null,
             RecurrenceRule: null, ClearRecurrence: null, TalkRoomSlug: null, ParticipantIds: null,
-            GenerateArtifacts: null,
+            GenerateArtifacts: null, RoomId: null, ClearRoom: null,
         };
 
         if (!onlyTimeChanged)
@@ -431,6 +455,29 @@ public static class EventEndpoints
             return Problem("Встреча заканчивается раньше, чем начинается", "Конец должен быть позже начала.");
         }
 
+        if (request.ClearRoom == true)
+        {
+            source.RoomId = null;
+        }
+        else if (request.RoomId is { } roomId)
+        {
+            if (await ValidateRoomAsync(db, roomId, start, end, source.Id, ct) is { } roomError)
+            {
+                return roomError;
+            }
+
+            source.RoomId = roomId;
+        }
+        else if (source.RoomId is { } existingRoomId && (start != source.StartUtc || end != source.EndUtc))
+        {
+            // Время серии сдвинулось, а переговорка осталась прежней — проверяем, что она
+            // всё ещё свободна на новое время, а не только на старое.
+            if (await ValidateRoomAsync(db, existingRoomId, start, end, source.Id, ct) is { } roomError)
+            {
+                return roomError;
+            }
+        }
+
         if (start != source.StartUtc)
         {
             // Сдвиг всей серии сбивает привязку исключений к расписанию: их ключи
@@ -484,7 +531,7 @@ public static class EventEndpoints
             return Results.NotFound();
         }
 
-        if (source.OrganizerId != viewer.Id)
+        if (!await CanManageAsync(db, viewer.Id, source.OrganizerId, ct))
         {
             return Results.Problem(
                 title: "Встречу удаляет организатор",
@@ -620,8 +667,14 @@ public static class EventEndpoints
         .Include(x => x.Artifacts)
         .Include(x => x.Overrides)
         .Include(x => x.Reminders)
+        .Include(x => x.Room)
+        .Include(x => x.CreatedByUser)
         .AsSplitQuery()
-        .Where(x => x.Calendar!.OwnerId == viewerId || x.Participants.Any(p => p.UserId == viewerId));
+        .Where(x => x.Calendar!.OwnerId == viewerId
+                    || x.Participants.Any(p => p.UserId == viewerId)
+                    // Делегат (Этап 7.6) видит весь календарь того, кто ему делегировал доступ —
+                    // так же, как секретарь видит календарь руководителя целиком, не только свои встречи.
+                    || db.Delegations.Any(d => d.OwnerId == x.Calendar!.OwnerId && d.DelegateId == viewerId));
 
     /// <summary>
     /// Галочки видимости фильтруют только собственные календари. Встречу, куда позвали
@@ -765,4 +818,48 @@ public static class EventEndpoints
 
     private static IResult Problem(string title, string? detail) =>
         Results.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);
+
+    /// <summary>
+    /// Право редактировать/удалять встречу (Этап 7.6): сам организатор либо тот, кому
+    /// организатор явно делегировал управление своим календарём (см. <see cref="Delegation"/>).
+    /// </summary>
+    private static async Task<bool> CanManageAsync(TalkatonDbContext db, Guid viewerId, Guid organizerId, CancellationToken ct) =>
+        viewerId == organizerId
+        || await db.Delegations.AnyAsync(x => x.OwnerId == organizerId && x.DelegateId == viewerId, ct);
+
+    /// <summary>
+    /// Переговорка (Этап 7.2) — общий ресурс: нельзя забронировать то же время в двух встречах
+    /// сразу. Смотрим только на прямое пересечение окна [start, end) — этого достаточно,
+    /// потому что <see cref="OccurrenceCalculator.Expand"/> уже отдаёт лишь то, что окно задевает.
+    /// </summary>
+    private static async Task<IResult?> ValidateRoomAsync(
+        TalkatonDbContext db,
+        Guid? roomId,
+        DateTime start,
+        DateTime end,
+        Guid? excludeEventId,
+        CancellationToken ct)
+    {
+        if (roomId is not { } id)
+        {
+            return null;
+        }
+
+        var exists = await db.Rooms.AnyAsync(x => x.Id == id, ct);
+        if (!exists)
+        {
+            return Problem("Неизвестная переговорка", "Такой комнаты нет в списке переговорок.");
+        }
+
+        var candidates = await db.Events
+            .Include(x => x.Overrides)
+            .Where(x => x.RoomId == id && x.Id != excludeEventId)
+            .Where(x => x.RecurrenceRule != null || x.Overrides.Count > 0 || (x.EndUtc > start && x.StartUtc < end))
+            .ToListAsync(ct);
+
+        var conflict = OccurrenceCalculator.Expand(candidates, start, end).Count > 0;
+        return conflict
+            ? Problem("Переговорка занята", "На это время комната уже забронирована другой встречей.")
+            : null;
+    }
 }

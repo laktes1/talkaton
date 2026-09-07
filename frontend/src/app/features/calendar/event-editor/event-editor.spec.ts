@@ -30,6 +30,7 @@ describe('EventEditor', () => {
     participantIds: [],
     reminderMinutesBefore: 10,
     hasArtifacts: false,
+    roomId: null,
     ...patch,
   });
 
@@ -39,6 +40,7 @@ describe('EventEditor', () => {
     fixture.componentRef.setInput('calendars', calendars);
     fixture.componentRef.setInput('people', []);
     fixture.componentRef.setInput('participantLists', []);
+    fixture.componentRef.setInput('rooms', []);
     fixture.detectChanges();
     return fixture.componentInstance as unknown as TestableEditor;
   };

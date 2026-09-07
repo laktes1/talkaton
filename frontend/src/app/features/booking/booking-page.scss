@@ -1,0 +1,95 @@
+.booking {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - var(--tk-header-height));
+  padding: var(--tk-space-4);
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tk-space-3);
+    width: min(520px, 100%);
+    padding: var(--tk-space-5);
+    background: var(--tk-surface-panel);
+    border: 1px solid var(--tk-border);
+    border-radius: var(--tk-radius-lg);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--tk-text-secondary);
+    line-height: 1.5;
+  }
+
+  &__row {
+    display: flex;
+    gap: var(--tk-space-2);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--tk-status-declined);
+    font-size: var(--tk-font-size-sm);
+  }
+
+  &__success {
+    margin: 0;
+    color: var(--tk-status-accepted);
+    line-height: 1.5;
+  }
+
+  &__submit {
+    padding: var(--tk-space-3);
+    background: var(--tk-accent);
+    border: none;
+    border-radius: var(--tk-radius-md);
+    color: var(--tk-accent-contrast);
+    font-size: var(--tk-font-size-lg);
+    font-weight: 600;
+
+    &:hover:not(:disabled) {
+      background: var(--tk-accent-hover);
+    }
+
+    &:disabled {
+      cursor: progress;
+      opacity: 0.7;
+    }
+  }
+}
+
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--tk-space-1);
+
+  &--narrow {
+    flex: 0 0 auto;
+  }
+
+  &__label {
+    font-size: var(--tk-font-size-sm);
+    color: var(--tk-text-secondary);
+  }
+
+  &__input {
+    padding: var(--tk-space-2) var(--tk-space-3);
+    background: var(--tk-surface-base);
+    border: 1px solid var(--tk-border-strong);
+    border-radius: var(--tk-radius-md);
+    color: var(--tk-text-primary);
+    font-family: inherit;
+    font-size: var(--tk-font-size-md);
+
+    &:focus {
+      border-color: var(--tk-accent);
+      outline: none;
+    }
+  }
+}

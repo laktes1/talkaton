@@ -14,6 +14,13 @@ public class ParticipantList
 
     public int SortOrder { get; set; }
 
+    /// <summary>
+    /// Ротация по очереди (Этап 7.3) — кто из списка получил встречу последним. Следующий
+    /// вызов «дай следующего по очереди» берёт того, кто идёт за ним в стабильном порядке
+    /// по <c>UserId</c>; <c>null</c> — ротация ещё не запускалась, начинаем с первого.
+    /// </summary>
+    public Guid? LastRoundRobinMemberId { get; set; }
+
     public ICollection<ParticipantListMember> Members { get; set; } = new List<ParticipantListMember>();
 }
 

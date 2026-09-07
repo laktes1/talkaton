@@ -13,6 +13,7 @@
       (birthdayScopeChanged)="store.setBirthdayScope($event)"
       (listDeleted)="onListDeleted($event)"
       (listClicked)="onListClicked($event)"
+      (delegationRequested)="openDelegationManager()"
     />
   </aside>
 
@@ -97,8 +98,22 @@
     [calendars]="store.calendars()"
     [people]="people()"
     [participantLists]="store.participantLists()"
+    [rooms]="store.rooms()"
+    [grantedToMe]="store.grantedToMe()"
     (saved)="onEditorSaved($event)"
     (cancelled)="editorSeed.set(null)"
+  />
+}
+
+@if (delegationManagerOpen()) {
+  <app-delegation-manager
+    [people]="people()"
+    [myDelegates]="store.myDelegates()"
+    [saving]="store.delegationSaving()"
+    [serverError]="store.delegationError()"
+    (granted)="onDelegationGranted($event)"
+    (revoked)="onDelegationRevoked($event)"
+    (closed)="closeDelegationManager()"
   />
 }
 

@@ -1,0 +1,96 @@
+.availability {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tk-space-1);
+  padding: var(--tk-space-2);
+  background: var(--tk-surface-raised);
+  border: 1px solid var(--tk-border);
+  border-radius: var(--tk-radius-md);
+
+  &--loading {
+    opacity: 0.6;
+  }
+
+  &__hours {
+    display: flex;
+    padding-left: 128px;
+  }
+
+  &__hour-marks {
+    position: relative;
+    flex: 1;
+    height: 14px;
+  }
+
+  &__hour-mark {
+    position: absolute;
+    font-size: var(--tk-font-size-sm);
+    color: var(--tk-text-muted);
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: var(--tk-space-2);
+  }
+
+  &__person {
+    display: flex;
+    flex-shrink: 0;
+    width: 128px;
+    align-items: center;
+    gap: var(--tk-space-1);
+    overflow: hidden;
+    font-size: var(--tk-font-size-sm);
+    color: var(--tk-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__avatar {
+    display: flex;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 10px;
+    color: var(--tk-accent-contrast);
+  }
+
+  &__track {
+    position: relative;
+    flex: 1;
+    height: 20px;
+    background: var(--tk-surface-panel);
+    border-radius: var(--tk-radius-sm);
+  }
+
+  &__busy {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    background: var(--tk-status-declined);
+    border-radius: 3px;
+    opacity: 0.55;
+  }
+
+  &__selection {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    pointer-events: none;
+    background: transparent;
+    border: 2px solid var(--tk-accent);
+    border-radius: var(--tk-radius-sm);
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: var(--tk-font-size-sm);
+    color: var(--tk-text-muted);
+  }
+}

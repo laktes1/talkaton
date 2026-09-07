@@ -46,6 +46,7 @@ public class TalkatonApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TalkatonDbContext>();
         await db.Database.MigrateAsync();
+        await RoomSeeder.EnsureSeededAsync(db);
     }
 
     /// <summary>Явная реализация: у базового класса свой DisposeAsync с другой сигнатурой.</summary>

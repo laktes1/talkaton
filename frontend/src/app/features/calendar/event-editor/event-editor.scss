@@ -285,6 +285,31 @@
   }
 }
 
+.round-robin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--tk-surface-raised);
+  border: 1px solid var(--tk-border);
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+
+  &:hover {
+    background: var(--tk-surface-hover);
+    border-color: var(--tk-border-strong);
+  }
+}
+
+.round-robin-hint {
+  margin: 0 0 var(--tk-space-2);
+  color: var(--tk-text-secondary);
+  font-size: var(--tk-font-size-sm);
+}
+
 .added-people {
   display: flex;
   flex-wrap: wrap;

@@ -8,6 +8,23 @@
   </header>
 
   <div class="dialog__body">
+    @if (seed().mode === 'create' && grantedToMe().length > 0) {
+      <label class="field">
+        <span class="field__label">От имени</span>
+        <select
+          name="onBehalfOf"
+          class="field__input"
+          [ngModel]="onBehalfOfUserId()"
+          (ngModelChange)="onBehalfOfUserId.set($event)"
+        >
+          <option [ngValue]="null">Себя</option>
+          @for (person of grantedToMe(); track person.userId) {
+            <option [ngValue]="person.userId">{{ person.displayName }}</option>
+          }
+        </select>
+      </label>
+    }
+
     <label class="field">
       <span class="field__label">Тема</span>
       <input
@@ -172,6 +189,23 @@
       </label>
     }
 
+    @if (rooms().length > 0) {
+      <label class="field">
+        <span class="field__label">Переговорка (для очной/гибридной встречи)</span>
+        <select
+          name="meetingRoom"
+          class="field__input"
+          [ngModel]="roomId()"
+          (ngModelChange)="roomId.set($event)"
+        >
+          <option [ngValue]="null">Без переговорки</option>
+          @for (room of rooms(); track room.id) {
+            <option [ngValue]="room.id">{{ room.name }} · до {{ room.capacity }} чел.</option>
+          }
+        </select>
+      </label>
+    }
+
     <div class="field">
       <span class="field__label">Добавить участников списком</span>
 
@@ -193,8 +227,19 @@
               {{ list.name }}
               <span class="cn">{{ list.members.length }}</span>
             </button>
+            <button
+              type="button"
+              class="round-robin-btn"
+              title="Назначить одного человека из списка по очереди"
+              (click)="pickRoundRobin(list, $event)"
+            >
+              🔁
+            </button>
           }
         </div>
+        @if (roundRobinPick(); as message) {
+          <p class="round-robin-hint">{{ message }}</p>
+        }
       }
 
       @if (chosenPeople().length > 0) {
@@ -249,6 +294,18 @@
         </ul>
       </details>
     </div>
+
+    @if (chosenPeople().length > 0 && !isAllDay()) {
+      <div class="field">
+        <span class="field__label">Занятость участников</span>
+        <app-availability-grid
+          [people]="chosenPeople()"
+          [day]="gridDay()"
+          [rangeStartMinutes]="rangeStartMinutes()"
+          [rangeEndMinutes]="rangeEndMinutes()"
+        />
+      </div>
+    }
 
     <label class="field">
       <span class="field__label">Описание</span>

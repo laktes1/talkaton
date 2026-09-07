@@ -17,12 +17,16 @@ describe('ParticipantListEditor', () => {
       displayName: 'Алина Мороз',
       timeZoneId: 'Asia/Yekaterinburg',
       avatarColorIndex: 1,
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 0,
     },
     {
       id: '17a3c980-86a9-4db4-862e-9c7048357464',
       displayName: 'Денис Волков',
       timeZoneId: 'Europe/Moscow',
       avatarColorIndex: 2,
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 0,
     },
   ];
 

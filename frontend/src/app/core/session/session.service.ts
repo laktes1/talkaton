@@ -27,6 +27,11 @@ export class SessionService {
     write(null);
   }
 
+  /** Профиль поменялся уже после входа (например, буфер до/после встречи, Этап 7.5). */
+  updateUser(user: User): void {
+    this.remember(user);
+  }
+
   private remember(user: User): void {
     this.current.set(user);
     write(user);

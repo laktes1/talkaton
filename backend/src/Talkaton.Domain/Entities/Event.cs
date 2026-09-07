@@ -15,6 +15,16 @@ public class Event
     public Guid OrganizerId { get; set; }
     public User? Organizer { get; set; }
 
+    /// <summary>
+    /// Кто фактически завёл встречу (Этап 7.6) — обычно совпадает с <see cref="OrganizerId"/>,
+    /// но при делегировании встречу создаёт помощник от имени руководителя: организатор —
+    /// руководитель, а здесь остаётся правда о том, чьими руками это сделано.
+    /// Пусто только у встреч, заведённых до появления этой колонки — читать как «совпадает
+    /// с организатором».
+    /// </summary>
+    public Guid? CreatedByUserId { get; set; }
+    public User? CreatedByUser { get; set; }
+
     public required string Title { get; set; }
     public string? Description { get; set; }
 
@@ -35,6 +45,10 @@ public class Event
 
     /// <summary>Хвост ссылки на комнату Толка: «pdata-hq» из talk.kontur.ru/c/pdata-hq.</summary>
     public string? TalkRoomSlug { get; set; }
+
+    /// <summary>Забронированная переговорка (Этап 7.2) — для очных/гибридных встреч. Необязательна.</summary>
+    public Guid? RoomId { get; set; }
+    public Room? Room { get; set; }
 
     public DateTime CreatedUtc { get; set; }
     public DateTime UpdatedUtc { get; set; }

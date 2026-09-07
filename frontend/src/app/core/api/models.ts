@@ -5,6 +5,9 @@ export interface User {
   displayName: string;
   timeZoneId: string;
   avatarColorIndex: number;
+  /** Резервное время до/после встречи (Этап 7.5), в минутах. */
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
 }
 
 export interface Calendar {
@@ -41,6 +44,10 @@ export interface Occurrence {
   participantCount: number;
   artifactCount: number;
   reminderMinutesBefore: number | null;
+  roomId: string | null;
+  roomName: string | null;
+  createdByUserId: string;
+  createdByName: string;
 }
 
 export interface Participant {
@@ -86,6 +93,8 @@ export interface CreateEventRequest {
   participantIds?: string[];
   reminderMinutesBefore?: number | null;
   generateArtifacts?: boolean;
+  roomId?: string | null;
+  onBehalfOfUserId?: string | null;
 }
 
 export interface UpdateEventRequest {
@@ -101,10 +110,43 @@ export interface UpdateEventRequest {
   participantIds?: string[];
   reminderMinutesBefore?: number;
   generateArtifacts?: boolean;
+  roomId?: string | null;
+  clearRoom?: boolean;
+}
+
+/** Одна сторона делегирования (Этап 7.6) — владелец или делегат, смотря какой список. */
+export interface DelegationPerson {
+  userId: string;
+  displayName: string;
+}
+
+/** Переговорка (Этап 7.2) — общий ресурс для выбора при создании встречи. */
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+}
+
+/** Занятость одной переговорки за период — тот же формат, что и грид занятости людей. */
+export interface RoomAvailability {
+  roomId: string;
+  busyBlocks: BusyBlock[];
 }
 
 /** К чему относится правка: ко всей серии или к одному вхождению. */
 export type EditScope = 'series' | 'occurrence';
+
+/** Один занятый интервал в гриде занятости — без темы встречи, только время. */
+export interface BusyBlock {
+  startUtc: string;
+  endUtc: string;
+}
+
+/** Занятость одного участника за запрошенный период (Этап 7.1). */
+export interface UserAvailability {
+  userId: string;
+  busyBlocks: BusyBlock[];
+}
 
 export interface Health {
   status: 'healthy' | 'degraded';

@@ -1,14 +1,17 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TalkatonApi } from '../../core/api/talkaton-api';
 import {
   Calendar,
   CreateEventRequest,
+  DelegationPerson,
   EditScope,
   EventDetails,
   Occurrence,
   ParticipantList,
   ParticipantStatus,
+  Room,
   UpdateEventRequest,
 } from '../../core/api/models';
 import {
@@ -55,6 +58,11 @@ export class CalendarStore {
   private readonly anchorState = signal(startOfDay(new Date()));
   private readonly calendarsState = signal<Calendar[]>([]);
   private readonly participantListsState = signal<ParticipantList[]>([]);
+  private readonly roomsState = signal<Room[]>([]);
+  private readonly myDelegatesState = signal<DelegationPerson[]>([]);
+  private readonly grantedToMeState = signal<DelegationPerson[]>([]);
+  private readonly delegationSavingState = signal(false);
+  private readonly delegationErrorState = signal<string | null>(null);
   private readonly occurrencesState = signal<Occurrence[]>([]);
   private readonly selectedState = signal<OccurrenceKey | null>(null);
   private readonly detailsState = signal<EventDetails | null>(null);
@@ -71,6 +79,11 @@ export class CalendarStore {
   readonly anchor = this.anchorState.asReadonly();
   readonly calendars = this.calendarsState.asReadonly();
   readonly participantLists = this.participantListsState.asReadonly();
+  readonly rooms = this.roomsState.asReadonly();
+  readonly myDelegates = this.myDelegatesState.asReadonly();
+  readonly grantedToMe = this.grantedToMeState.asReadonly();
+  readonly delegationSaving = this.delegationSavingState.asReadonly();
+  readonly delegationError = this.delegationErrorState.asReadonly();
   readonly selected = this.selectedState.asReadonly();
   readonly details = this.detailsState.asReadonly();
   readonly search = this.searchState.asReadonly();
@@ -157,7 +170,66 @@ export class CalendarStore {
         error: () => this.errorState.set('Не удалось загрузить списки участников'),
       });
 
+    this.api
+      .rooms()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rooms) => this.roomsState.set(rooms),
+        error: () => this.errorState.set('Не удалось загрузить список переговорок'),
+      });
+
+    this.loadDelegations();
     this.refresh();
+  }
+
+  loadDelegations(): void {
+    this.api
+      .myDelegates()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (people) => this.myDelegatesState.set(people) });
+
+    this.api
+      .grantedToMe()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (people) => this.grantedToMeState.set(people) });
+  }
+
+  grantDelegation(delegateUserId: string): void {
+    this.delegationSavingState.set(true);
+    this.delegationErrorState.set(null);
+
+    this.api
+      .grantDelegation(delegateUserId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.delegationSavingState.set(false);
+          this.loadDelegations();
+        },
+        error: () => {
+          this.delegationSavingState.set(false);
+          this.delegationErrorState.set('Не удалось выдать право — попробуйте ещё раз');
+        },
+      });
+  }
+
+  revokeDelegation(delegateUserId: string): void {
+    this.delegationSavingState.set(true);
+    this.delegationErrorState.set(null);
+
+    this.api
+      .revokeDelegation(delegateUserId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.delegationSavingState.set(false);
+          this.loadDelegations();
+        },
+        error: () => {
+          this.delegationSavingState.set(false);
+          this.delegationErrorState.set('Не удалось забрать право — попробуйте ещё раз');
+        },
+      });
   }
 
   refresh(): void {
@@ -296,7 +368,7 @@ export class CalendarStore {
           });
           this.refresh();
         },
-        error: () => this.errorState.set('Не удалось создать встречу'),
+        error: (err: HttpErrorResponse) => this.errorState.set(serverDetail(err) ?? 'Не удалось создать встречу'),
       });
   }
 
@@ -309,8 +381,8 @@ export class CalendarStore {
           this.detailsState.set(details);
           this.refresh();
         },
-        error: () => {
-          this.errorState.set('Не удалось сохранить изменения встречи');
+        error: (err: HttpErrorResponse) => {
+          this.errorState.set(serverDetail(err) ?? 'Не удалось сохранить изменения встречи');
           this.refresh();
         },
       });
@@ -406,6 +478,15 @@ export class CalendarStore {
   private patchCalendarLocally(id: string, isVisible: boolean): void {
     this.calendarsState.update((all) => all.map((x) => (x.id === id ? { ...x, isVisible } : x)));
   }
+}
+
+/**
+ * Бэкенд отдаёт человекочитаемую причину отказа как ProblemDetails.detail (например,
+ * «Переговорка занята») — показываем её вместо обезличенного «не удалось сохранить».
+ */
+function serverDetail(err: HttpErrorResponse): string | null {
+  const detail = err.error?.detail;
+  return typeof detail === 'string' && detail.trim().length > 0 ? detail : null;
 }
 
 export function isSameOccurrence(left: Occurrence, right: Occurrence | OccurrenceKey | null): boolean {

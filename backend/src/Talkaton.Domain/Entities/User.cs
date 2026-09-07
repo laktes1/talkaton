@@ -21,6 +21,14 @@ public class User
     /// <summary>Индекс палитры аватара 0..5 — сами цвета живут во фронте, в токенах темы.</summary>
     public int AvatarColorIndex { get; set; }
 
+    /// <summary>
+    /// Резервное время до/после встречи (Этап 7.5) в минутах — своя «подушка», которую
+    /// нельзя занять другой встречей впритык. Учитывается в гриде занятости
+    /// (см. AvailabilityEndpoints) и на публичной странице самозаписи.
+    /// </summary>
+    public int BufferBeforeMinutes { get; set; }
+    public int BufferAfterMinutes { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public ICollection<Calendar> Calendars { get; set; } = new List<Calendar>();

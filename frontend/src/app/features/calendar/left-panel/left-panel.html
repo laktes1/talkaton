@@ -135,6 +135,48 @@
   </ul>
 </section>
 
+<section class="section">
+  <div class="section-title">
+    <h2>Делегирование</h2>
+  </div>
+  <button type="button" class="delegation-open" (click)="delegationRequested.emit()">
+    Кто управляет моим календарём
+  </button>
+</section>
+
+<section class="section">
+  <div class="section-title">
+    <h2>Буфер вокруг встреч</h2>
+  </div>
+  <div class="buffer-row">
+    <label class="buffer-field">
+      <span>До, мин</span>
+      <input
+        type="number"
+        min="0"
+        max="60"
+        [ngModel]="bufferBefore()"
+        (ngModelChange)="bufferBefore.set(+$event)"
+        (change)="saveBuffer()"
+      />
+    </label>
+    <label class="buffer-field">
+      <span>После, мин</span>
+      <input
+        type="number"
+        min="0"
+        max="60"
+        [ngModel]="bufferAfter()"
+        (ngModelChange)="bufferAfter.set(+$event)"
+        (change)="saveBuffer()"
+      />
+    </label>
+  </div>
+  @if (bufferSaved()) {
+    <p class="buffer-saved">Сохранено</p>
+  }
+</section>
+
 <footer class="version" title="Версия интерфейса на стенде">
   Толкатрон <span class="version__number">{{ version }}</span>
 </footer>

@@ -125,6 +125,53 @@ public static class ParticipantListEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        group.MapPost("/{id:guid}/round-robin/next", async (
+                Guid id,
+                CurrentUser currentUser,
+                TalkatonDbContext db,
+                CancellationToken ct) =>
+            {
+                var list = await db.ParticipantLists
+                    .Include(x => x.Members)
+                    .ThenInclude(x => x.User)
+                    .FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == currentUser.Required.Id, ct);
+                if (list is null)
+                {
+                    return Results.NotFound();
+                }
+
+                // Стабильный порядок по UserId — не важно какой конкретно, важно, что он
+                // не меняется между вызовами, иначе ротация «прыгала» бы туда-сюда.
+                var ordered = list.Members
+                    .Where(x => x.User is not null)
+                    .OrderBy(x => x.UserId)
+                    .ToList();
+
+                if (ordered.Count == 0)
+                {
+                    return Results.Problem(
+                        title: "В списке никого нет",
+                        detail: "Добавьте хотя бы одного человека, прежде чем распределять встречи по очереди.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var lastIndex = list.LastRoundRobinMemberId is { } lastId
+                    ? ordered.FindIndex(x => x.UserId == lastId)
+                    : -1;
+                var nextIndex = (lastIndex + 1) % ordered.Count;
+                var next = ordered[nextIndex];
+
+                list.LastRoundRobinMemberId = next.UserId;
+                await db.SaveChangesAsync(ct);
+
+                return Results.Ok(UserDto.From(next.User!));
+            })
+            .WithName("NextRoundRobinMember")
+            .WithSummary("Ротация по очереди (Этап 7.3): кто из списка получает следующую встречу")
+            .Produces<UserDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         return app;
     }
 
